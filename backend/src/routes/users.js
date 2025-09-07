@@ -42,6 +42,7 @@ router.get("/", async (req, res) => {
         id: String(u._id),
         fullName: u.profile?.fullName || u.fullName || "",
         title: u.profile?.title || "",
+        email: u.email || u.profile?.email || "",
         bio: u.profile?.bio || "",
         location: u.profile?.location || "",
         hourlyRate: u.profile?.hourlyRate ?? undefined,
@@ -349,6 +350,36 @@ router.put("/:id/projects/:projectId", async (req, res) => {
 
     const updated = (result.profile?.projects || []).find((p) => String(p._id) === String(projectId));
     return res.json({ success: true, project: updated });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/users/:id/projects/:projectId
+// Remove an embedded project under the user's profile.projects
+router.delete("/:id/projects/:projectId", async (req, res) => {
+  try {
+    const { id, projectId } = req.params;
+    if (!id || !mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: "Invalid user id" });
+    }
+    if (!projectId) {
+      return res.status(400).json({ error: "projectId is required" });
+    }
+
+    const result = await User.findByIdAndUpdate(
+      id,
+      { $pull: { "profile.projects": { _id: projectId } }, $set: { updatedAt: new Date() } },
+      { new: true }
+    ).select("profile.projects").lean();
+
+    if (!result) return res.status(404).json({ error: "User not found" });
+
+    // If nothing was removed, check whether project existed
+    const stillExists = (result.profile?.projects || []).some((p) => String(p._id) === String(projectId));
+    if (stillExists) return res.status(404).json({ error: "Project not found" });
+
+    return res.json({ success: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

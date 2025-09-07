@@ -114,6 +114,22 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
+// DELETE /api/jobs/:id
+// Deletes a job by ID
+router.delete("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id || !mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: "Invalid job id" });
+    }
+    const deleted = await Job.findByIdAndDelete(id);
+    if (!deleted) return res.status(404).json({ error: "Job not found" });
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Submit a project for a job
 router.post("/:id/submissions", async (req, res) => {
   try {

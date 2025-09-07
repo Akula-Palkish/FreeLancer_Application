@@ -55,7 +55,9 @@ export function JobDetail() {
     );
   }
 
-  const backTo = location.state?.from === 'applied'
+  const backTo = location.state?.from === 'admin'
+    ? '/admin/dashboard'
+    : location.state?.from === 'applied'
     ? '/applied-jobs'
     : location.state?.from === 'work'
     ? '/work'

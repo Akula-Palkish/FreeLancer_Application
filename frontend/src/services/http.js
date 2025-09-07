@@ -4,7 +4,9 @@ export const API_BASE =
 export async function http(method, path, body) {
   const headers = { "Content-Type": "application/json" };
   try {
-    const token = localStorage.getItem("auth_token");
+    const adminToken = localStorage.getItem("admin_token");
+    const userToken = localStorage.getItem("auth_token");
+    const token = adminToken || userToken;
     if (token) headers["Authorization"] = `Bearer ${token}`;
   } catch {}
 

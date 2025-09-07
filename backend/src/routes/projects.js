@@ -26,6 +26,22 @@ router.get("/freelancer/:id", async (req, res) => {
   }
 });
 
+// DELETE /api/projects/:id
+// Deletes a project document (collection-based projects only)
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id || !mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: 'Invalid project id' });
+    }
+    const deleted = await Project.findByIdAndDelete(id);
+    if (!deleted) return res.status(404).json({ error: 'Project not found' });
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
 
 // PUT /api/projects/:id

@@ -8,6 +8,7 @@ import applicationRoutes from "./routes/applications.js";
 import usersRoutes from "./routes/users.js";
 import employersRoutes from "./routes/employers.js";
 import projectsRoutes from "./routes/projects.js";
+import adminRoutes from "./routes/admin.js";
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.use("/api/applications", applicationRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/employers", employersRoutes);
 app.use("/api/projects", projectsRoutes);
+app.use("/api/admin", adminRoutes);
 
 connectToDatabase(process.env.MONGODB_URI)
   .then(() => {

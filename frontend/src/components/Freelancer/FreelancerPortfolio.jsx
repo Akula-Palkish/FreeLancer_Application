@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Star, MapPin, Globe, Linkedin, Github, Calendar, DollarSign, CheckCircle, XCircle, Tag, Mail, Phone } from "lucide-react";
+import { ArrowLeft, Star, MapPin, Globe, Linkedin, Github, Calendar, DollarSign, CheckCircle, XCircle, Tag, Mail, Phone, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { http } from "../../services/http.js";
 import { formatINR } from "../../utils/currency.js";
@@ -560,13 +560,28 @@ export function FreelancerPortfolio() {
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">{project.title}</h3>
                   {isOwner && (project._source === 'collection' || project._source === 'embedded') && (project._id || project.id) && (
-                    <button
-                      type="button"
-                      onClick={() => setEditingProject(project)}
-                      className="text-sm px-2 py-1 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
-                    >
-                      Edit
-                    </button>
+                    <div className="flex items-center gap-2 -mt-1">
+                      <button
+                        type="button"
+                        onClick={() => setEditingProject(project)}
+                        className="inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                        aria-label="Edit project"
+                        title="Edit"
+                      >
+                        <Pencil className="w-4 h-4" />
+                        <span className="hidden sm:inline">Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmAction({ open: true, type: 'deleteProject', project })}
+                        className="inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-md border border-red-300 text-red-700 hover:bg-red-50 transition-colors"
+                        aria-label="Delete project"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span className="hidden sm:inline">Delete</span>
+                      </button>
+                    </div>
                   )}
                 </div>
                 <p className="text-gray-600 mb-3">{project.description}</p>
@@ -641,54 +656,102 @@ export function FreelancerPortfolio() {
       )}
 
       {/* Confirm Dialog */}
-      {confirmAction.open && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <div className="flex items-start justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {confirmAction.type === 'accept' ? 'Accept Application' : 'Decline Application'}
-              </h3>
-              <button
-                onClick={() => setConfirmAction({ open: false, type: null, application: null })}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
-            <p className="mt-3 text-gray-700">
-              {confirmAction.type === 'accept'
-                ? 'Are you sure you want to accept this application? The job status will be updated to Accepted.'
-                : 'Are you sure you want to decline this application? The job status will be updated to Declined.'}
-            </p>
-            <div className="mt-6 flex items-center justify-end gap-3">
-              <button
-                onClick={() => setConfirmAction({ open: false, type: null, application: null })}
-                className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  const app = confirmAction.application;
-                  try {
-                    if (confirmAction.type === 'accept') {
-                      await handleAcceptApplication(app);
-                    } else {
-                      await handleDeclineApplication(app);
-                    }
-                    setConfirmAction({ open: false, type: null, application: null });
-                  } catch (e) {
-                    console.error('Failed to update application', e);
-                  }
-                }}
-                className={`px-4 py-2 rounded-md text-white ${confirmAction.type === 'accept' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
-              >
-                {confirmAction.type === 'accept' ? 'Confirm Accept' : 'Confirm Decline'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {confirmAction.open && confirmAction.type === 'deleteProject' && (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-fadeIn">
+      <div className="flex items-start justify-between mb-2">
+        <h3 className="text-xl font-bold text-gray-900">Delete Project</h3>
+        <button
+          onClick={() => setConfirmAction({ open: false, type: null, project: null })}
+          className="text-gray-400 hover:text-gray-700 text-2xl font-bold"
+        >
+          ×
+        </button>
+      </div>
+      <p className="mt-2 text-gray-700 text-base">
+        Are you sure you want to delete this project? This action cannot be undone.
+      </p>
+      <div className="mt-6 flex items-center justify-end gap-3">
+        <button
+          onClick={() => setConfirmAction({ open: false, type: null, project: null })}
+          className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={async () => {
+            const proj = confirmAction.project;
+            if (!proj || !(proj._id || proj.id)) return;
+            try {
+              const projId = proj._id || proj.id;
+              // Decide endpoint based on data source
+              const endpoint = proj._source === 'collection'
+                ? `/projects/${projId}`
+                : `/users/${id}/projects/${projId}`;
+              await http('DELETE', endpoint);
+              setProjects((prev) => prev.filter((p) => String(p._id||p.id) !== String(projId)));
+              setConfirmAction({ open: false, type: null, project: null });
+            } catch (err) {
+              alert('Failed to delete project');
+            }
+          }}
+          className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
+        >
+          Confirm Delete
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{confirmAction.open && (confirmAction.type === 'accept' || confirmAction.type === 'decline') && (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
+    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+      <div className="flex items-start justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">
+          {confirmAction.type === 'accept' ? 'Accept Application' : 'Decline Application'}
+        </h3>
+        <button
+          onClick={() => setConfirmAction({ open: false, type: null, application: null })}
+          className="text-gray-500 hover:text-gray-700"
+        >
+          ×
+        </button>
+      </div>
+      <p className="mt-3 text-gray-700">
+        {confirmAction.type === 'accept'
+          ? 'Are you sure you want to accept this application? The job status will be updated to Accepted.'
+          : 'Are you sure you want to decline this application? The job status will be updated to Declined.'}
+      </p>
+      <div className="mt-6 flex items-center justify-end gap-3">
+        <button
+          onClick={() => setConfirmAction({ open: false, type: null, application: null })}
+          className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={async () => {
+            const app = confirmAction.application;
+            try {
+              if (confirmAction.type === 'accept') {
+                await handleAcceptApplication(app);
+              } else {
+                await handleDeclineApplication(app);
+              }
+              setConfirmAction({ open: false, type: null, application: null });
+            } catch (e) {
+              console.error('Failed to update application', e);
+            }
+          }}
+          className={`px-4 py-2 rounded-md text-white ${confirmAction.type === 'accept' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
+        >
+          {confirmAction.type === 'accept' ? 'Confirm Accept' : 'Confirm Decline'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {editingProject && (
         <EditProjectModal

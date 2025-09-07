@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, MapPin, Clock, DollarSign, Eye, X } from "lucide-react";
+import { Search, MapPin, Clock, DollarSign, Eye, X, Trash2 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { http } from "../../services/http.js";
 import { formatINR } from "../../utils/currency.js";
@@ -11,6 +11,7 @@ export function EmployerManageJobs() {
   const [loading, setLoading] = useState(true);
   const [appsJob, setAppsJob] = useState(null); // job selected to view applications
   const [selectedApplication, setSelectedApplication] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState({ open: false, job: null });
   const navigate = useNavigate();
 
   // Title-only search: type then click Search/press Enter
@@ -136,6 +137,51 @@ export function EmployerManageJobs() {
                       <span className="flex items-center"><Clock className="h-4 w-4 mr-1" />{new Date(job.createdAt).toLocaleDateString()}</span>
                     </div>
                   )}
+
+  {/* Confirm Delete Modal */}
+  {confirmDelete.open && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+        <div className="flex items-start justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">Delete Job</h3>
+          <button
+            onClick={() => setConfirmDelete({ open: false, job: null })}
+            className="text-gray-500 hover:text-gray-700"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <p className="mt-3 text-gray-700">
+          Are you sure you want to delete the job "{confirmDelete.job?.title}"? This action cannot be undone.
+        </p>
+        <div className="mt-6 flex items-center justify-end gap-3">
+          <button
+            onClick={() => setConfirmDelete({ open: false, job: null })}
+            className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={async () => {
+              const job = confirmDelete.job;
+              if (!job?.id) return;
+              try {
+                await http('DELETE', `/jobs/${job.id}`);
+                setJobs((prev) => prev.filter((j) => String(j.id) !== String(job.id)));
+                setConfirmDelete({ open: false, job: null });
+              } catch (e) {
+                alert('Failed to delete job');
+              }
+            }}
+            className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
+          >
+            Confirm Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
                   <div className="mt-2 text-sm text-gray-700 line-clamp-2">{job.description}</div>
                   <div className="mt-3 flex items-center gap-4">
                     <div className="flex items-center text-green-600">
@@ -160,6 +206,13 @@ export function EmployerManageJobs() {
                     className="inline-flex items-center px-3 py-2 text-blue-600 hover:text-blue-700"
                   >
                     <Eye className="h-4 w-4 mr-1" /> View
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete({ open: true, job })}
+                    className="inline-flex items-center px-3 py-2 text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" /> Delete
                   </button>
                 </div>
               </div>

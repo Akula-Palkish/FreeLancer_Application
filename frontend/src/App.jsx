@@ -8,6 +8,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { AdminAuthProvider, useAdminAuth } from "./contexts/AdminAuthContext";
 import { Layout } from "./components/Layout/Layout";
 import { SignUp } from "./components/Auth/SignUp";
 import { SignIn } from "./components/Auth/SignIn";
@@ -34,9 +35,13 @@ import { EmployerProfile } from "./components/Profile/EmployerProfile";
 import { FreelancerProfile } from "./components/Profile/FreelancerProfile";
 import { Toaster } from "react-hot-toast";
 import { AppliedJobs } from "./components/Jobs/AppliedJobs";
+import { AdminLogin } from "./components/Admin/AdminLogin";
+import { AdminDashboard } from "./components/Admin/AdminDashboard";
+import { EmployerPublic } from "./components/Employers/EmployerPublic";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
+  const { admin } = useAdminAuth();
 
   if (loading) {
     return (
@@ -46,11 +51,34 @@ function ProtectedRoute({ children }) {
     );
   }
 
+  // If admin session exists, allow access to protected pages (read-only use cases)
+  // Admin has its own token; we treat admin as authenticated for viewing pages.
+
   let hasToken = false;
   try {
     hasToken = !!localStorage.getItem("auth_token");
   } catch {}
-  return user && hasToken ? <>{children}</> : <Navigate to="/auth/signin" />;
+  let hasAdminToken = false;
+  try {
+    hasAdminToken = !!localStorage.getItem("admin_token");
+  } catch {}
+  return (user && hasToken) || (admin && hasAdminToken) ? <>{children}</> : <Navigate to="/auth/signin" />;
+}
+
+function ProtectedAdminRoute({ children }) {
+  const { admin, loading } = useAdminAuth();
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+  let hasToken = false;
+  try {
+    hasToken = !!localStorage.getItem("admin_token");
+  } catch {}
+  return admin && hasToken ? <>{children}</> : <Navigate to="/admin/login" />;
 }
 
 function RoleAwareProfileRoute() {
@@ -63,6 +91,7 @@ function RoleAwareProfileRoute() {
 
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
+  const { admin } = useAdminAuth();
 
   if (loading) {
     return (
@@ -71,6 +100,13 @@ function PublicRoute({ children }) {
       </div>
     );
   }
+
+  // If admin is logged in, send to admin dashboard
+  let hasAdminToken = false;
+  try {
+    hasAdminToken = !!localStorage.getItem("admin_token");
+  } catch {}
+  if (admin && hasAdminToken) return <Navigate to="/admin/dashboard" />;
 
   // Only treat as authenticated if we have both user and token
   let hasToken = false;
@@ -307,10 +343,49 @@ function HomePage() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <AdminAuthProvider>
+      <AuthProvider>
+        <Router>
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
         <Routes>
+          {/* Admin */}
+          <Route
+            path="/admin/login"
+            element={
+              <Layout>
+                <AdminLogin />
+              </Layout>
+            }
+          />
+          {/* Public Employer Profile */}
+          <Route
+            path="/employers/:id"
+            element={
+              <Layout>
+                <EmployerPublic />
+              </Layout>
+            }
+          />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedAdminRoute>
+                <Layout>
+                  <AdminDashboard />
+                </Layout>
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/jobs"
+            element={
+              <ProtectedAdminRoute>
+                <Layout>
+                  <JobList />
+                </Layout>
+              </ProtectedAdminRoute>
+            }
+          />
           {/* Home: marketing/landing */}
           <Route
             path="/"
@@ -598,8 +673,9 @@ function App() {
             }
           />
         </Routes>
-      </Router>
-    </AuthProvider>
+        </Router>
+      </AuthProvider>
+    </AdminAuthProvider>
   );
 }
 
